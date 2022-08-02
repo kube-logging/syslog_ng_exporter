@@ -238,7 +238,7 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 }
 
 func parseStatLine(line string) (Stat, error) {
-	statlen := 7
+	statlen := 6
 	part := strings.SplitN(strings.TrimSpace(line), ";", statlen)
 	if len(part) < statlen {
 		return Stat{}, fmt.Errorf("insufficient parts: %d < 6", len(part))
