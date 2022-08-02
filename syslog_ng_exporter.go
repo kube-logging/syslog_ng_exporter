@@ -39,16 +39,17 @@ type Exporter struct {
 	mutex    sync.Mutex
 	client   *http.Client
 
-	srcProcessed   *prometheus.Desc
-	dstProcessed   *prometheus.Desc
-	dstDropped     *prometheus.Desc
-	dstStored      *prometheus.Desc
-	dstWritten     *prometheus.Desc
-	dstMemory      *prometheus.Desc
-	dstCPU         *prometheus.Desc
-	up             *prometheus.Desc
-	scrapeSuccess  prometheus.Counter
-	scrapeFailures prometheus.Counter
+	srcProcessed      *prometheus.Desc
+	dstProcessed      *prometheus.Desc
+	dstDropped        *prometheus.Desc
+	dstStored         *prometheus.Desc
+	dstWritten        *prometheus.Desc
+	dstMemory         *prometheus.Desc
+	dstTruncatedCount *prometheus.Desc
+	dstCPU            *prometheus.Desc
+	up                *prometheus.Desc
+	scrapeSuccess     prometheus.Counter
+	scrapeFailures    prometheus.Counter
 }
 
 type result struct {
@@ -101,6 +102,11 @@ func NewExporter(path string) *Exporter {
 			"Bytes of memory currently used to store messages for this destination.",
 			[]string{"type", "id", "destination"},
 			nil),
+		dstTruncatedCount: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_truncated_count", "total"),
+			"Count of truncated messages.",
+			[]string{"type", "id", "destination"},
+			nil),
 		dstCPU: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_bytes_processed", "total"),
 			"Bytes of cpu currently used to process messages for this destination.",
@@ -138,6 +144,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.dstMemory
 	ch <- e.dstCPU
 	ch <- e.up
+	ch <- e.dstTruncatedCount
 	e.scrapeFailures.Describe(ch)
 	e.scrapeSuccess.Describe(ch)
 }
@@ -229,6 +236,9 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "cpu_usage":
 				ch <- prometheus.MustNewConstMetric(e.dstMemory, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "truncated_count":
+				ch <- prometheus.MustNewConstMetric(e.dstTruncatedCount, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
 		}
