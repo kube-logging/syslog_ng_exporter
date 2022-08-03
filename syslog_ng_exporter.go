@@ -46,6 +46,7 @@ type Exporter struct {
 	dstWritten        *prometheus.Desc
 	dstMemory         *prometheus.Desc
 	dstTruncatedCount *prometheus.Desc
+	dstEpsLast1h      *prometheus.Desc
 	dstCPU            *prometheus.Desc
 	up                *prometheus.Desc
 	scrapeSuccess     prometheus.Counter
@@ -85,6 +86,11 @@ func NewExporter(path string) *Exporter {
 		dstDropped: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_messages_dropped", "total"),
 			"Number of messages dropped by this destination due to store overflow.",
+			[]string{"type", "id", "destination"},
+			nil),
+		dstEpsLast1h: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_eps_last24", "total"),
+			"Events per second, measured for the last hour",
 			[]string{"type", "id", "destination"},
 			nil),
 		dstStored: prometheus.NewDesc(
@@ -145,6 +151,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.dstCPU
 	ch <- e.up
 	ch <- e.dstTruncatedCount
+	ch <- e.dstEpsLast1h
 	e.scrapeFailures.Describe(ch)
 	e.scrapeSuccess.Describe(ch)
 }
@@ -240,6 +247,10 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			case "truncated_count":
 				ch <- prometheus.MustNewConstMetric(e.dstTruncatedCount, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_last_1h":
+				ch <- prometheus.MustNewConstMetric(e.dstEpsLast1h, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+
 			}
 		}
 	}
