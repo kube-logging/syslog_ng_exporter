@@ -291,7 +291,6 @@ func main() {
 	default:
 		panic("unrecognized loglevel")
 	}
-	log.SetLevel(log.DebugLevel)
 
 	log.Infoln("Starting syslog_ng_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
