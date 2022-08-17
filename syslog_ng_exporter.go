@@ -40,13 +40,24 @@ type Exporter struct {
 	client   *http.Client
 
 	srcProcessed      *prometheus.Desc
+	srcStamp          *prometheus.Desc
+	srcMsgSizeMax     *prometheus.Desc
+	srcMsgSizeAvg     *prometheus.Desc
+	srcEpsLast1h      *prometheus.Desc
+	srcEpsLast24h     *prometheus.Desc
+	srcEpsSinceStart  *prometheus.Desc
 	dstProcessed      *prometheus.Desc
 	dstDropped        *prometheus.Desc
 	dstStored         *prometheus.Desc
+	dstQueued         *prometheus.Desc
 	dstWritten        *prometheus.Desc
 	dstMemory         *prometheus.Desc
 	dstTruncatedCount *prometheus.Desc
+	dstTruncatedBytes *prometheus.Desc
+	dstMsgSizeMax     *prometheus.Desc
 	dstEpsLast1h      *prometheus.Desc
+	dstEpsLast24h     *prometheus.Desc
+	dstEpsSinceStart  *prometheus.Desc
 	dstCPU            *prometheus.Desc
 	up                *prometheus.Desc
 	scrapeSuccess     prometheus.Counter
@@ -78,6 +89,36 @@ func NewExporter(path string) *Exporter {
 			"Number of messages processed by this source.",
 			[]string{"type", "id", "source"},
 			nil),
+		srcStamp: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_messages_sent", "total"),
+			"The UNIX timestamp of the last message sent to the source.",
+			[]string{"type", "id", "source"},
+			nil),
+		srcMsgSizeMax: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_messages_size_max", "total"),
+			" The current largest message size of the given source.",
+			[]string{"type", "id", "source"},
+			nil),
+		srcMsgSizeAvg: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_messages_size_avg", "total"),
+			"The current average message size of the given source or source.",
+			[]string{"type", "id", "source"},
+			nil),
+		srcEpsLast1h: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_eps_last_1h", "total"),
+			"The EPS value of the past 1 hour.",
+			[]string{"type", "id", "source"},
+			nil),
+		srcEpsLast24h: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_eps_last_24h", "total"),
+			"The EPS value of the past 24 hour.",
+			[]string{"type", "id", "source"},
+			nil),
+		srcEpsSinceStart: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "source_eps_since_start", "total"),
+			"The EPS value since start",
+			[]string{"type", "id", "source"},
+			nil),
 		dstProcessed: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_messages_processed", "total"),
 			"Number of messages processed by this destination.",
@@ -89,13 +130,28 @@ func NewExporter(path string) *Exporter {
 			[]string{"type", "id", "destination"},
 			nil),
 		dstEpsLast1h: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "destination_eps_last24", "total"),
+			prometheus.BuildFQName(namespace, "destination_eps_last_1h", "total"),
 			"Events per second, measured for the last hour",
+			[]string{"type", "id", "destination"},
+			nil),
+		dstEpsLast24h: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_eps_last_24h", "total"),
+			"Events per second, measured for the last 24 hour",
+			[]string{"type", "id", "destination"},
+			nil),
+		dstEpsSinceStart: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_eps_since_start", "total"),
+			"The EPS value since start",
 			[]string{"type", "id", "destination"},
 			nil),
 		dstStored: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_messages_stored", "total"),
 			"Number of messages currently stored for this destination.",
+			[]string{"type", "id", "destination"},
+			nil),
+		dstQueued: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_messages_queued", "total"),
+			"Number of messages currently queued for this destination.",
 			[]string{"type", "id", "destination"},
 			nil),
 		dstWritten: prometheus.NewDesc(
@@ -111,6 +167,16 @@ func NewExporter(path string) *Exporter {
 		dstTruncatedCount: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_truncated_count", "total"),
 			"Count of truncated messages.",
+			[]string{"type", "id", "destination"},
+			nil),
+		dstMsgSizeMax: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_messages_size_max", "total"),
+			" The current largest message size of the given destination",
+			[]string{"type", "id", "source"},
+			nil),
+		dstTruncatedBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "destination_truncated_bytes", "total"),
+			"Bytes of truncated messages.",
 			[]string{"type", "id", "destination"},
 			nil),
 		dstCPU: prometheus.NewDesc(
@@ -143,15 +209,26 @@ func NewExporter(path string) *Exporter {
 
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.srcProcessed
+	ch <- e.srcStamp
+	ch <- e.srcMsgSizeMax
+	ch <- e.srcMsgSizeAvg
+	ch <- e.srcEpsLast1h
+	ch <- e.srcEpsLast24h
+	ch <- e.srcEpsSinceStart
 	ch <- e.dstProcessed
 	ch <- e.dstDropped
 	ch <- e.dstStored
+	ch <- e.dstQueued
 	ch <- e.dstWritten
 	ch <- e.dstMemory
 	ch <- e.dstCPU
 	ch <- e.up
 	ch <- e.dstTruncatedCount
+	ch <- e.dstTruncatedBytes
+	ch <- e.dstMsgSizeMax
 	ch <- e.dstEpsLast1h
+	ch <- e.dstEpsLast24h
+	ch <- e.dstEpsSinceStart
 	e.scrapeFailures.Describe(ch)
 	e.scrapeSuccess.Describe(ch)
 }
@@ -222,8 +299,25 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			case "processed":
 				ch <- prometheus.MustNewConstMetric(e.srcProcessed, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
+			case "stamp":
+				ch <- prometheus.MustNewConstMetric(e.srcStamp, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "msg_size_max":
+				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeMax, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "msg_size_avg":
+				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeAvg, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_last_1h":
+				ch <- prometheus.MustNewConstMetric(e.srcEpsLast1h, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_last_24h":
+				ch <- prometheus.MustNewConstMetric(e.srcEpsLast24h, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_since_start":
+				ch <- prometheus.MustNewConstMetric(e.srcEpsSinceStart, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-
 		case "dst.", "dest":
 			switch stat.metric {
 			case "dropped":
@@ -235,20 +329,35 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			case "written":
 				ch <- prometheus.MustNewConstMetric(e.dstWritten, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
-			case "stored", "queued":
+			case "stored":
 				ch <- prometheus.MustNewConstMetric(e.dstStored, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "queued":
+				ch <- prometheus.MustNewConstMetric(e.dstQueued, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "memory_usage":
 				ch <- prometheus.MustNewConstMetric(e.dstMemory, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "cpu_usage":
-				ch <- prometheus.MustNewConstMetric(e.dstMemory, prometheus.GaugeValue,
+				ch <- prometheus.MustNewConstMetric(e.dstCPU, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "truncated_count":
 				ch <- prometheus.MustNewConstMetric(e.dstTruncatedCount, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
+			case "truncated_bytes":
+				ch <- prometheus.MustNewConstMetric(e.dstTruncatedBytes, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "msg_size_max":
+				ch <- prometheus.MustNewConstMetric(e.dstMsgSizeMax, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
 			case "eps_last_1h":
 				ch <- prometheus.MustNewConstMetric(e.dstEpsLast1h, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_last_24h":
+				ch <- prometheus.MustNewConstMetric(e.dstEpsLast24h, prometheus.GaugeValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "eps_since_start":
+				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 
 			}
