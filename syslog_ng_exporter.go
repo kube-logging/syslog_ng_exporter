@@ -90,7 +90,7 @@ func NewExporter(path string) *Exporter {
 			[]string{"type", "id", "source"},
 			nil),
 		srcStamp: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "source_messages_sent", "total"),
+			prometheus.BuildFQName(namespace, "source_messages_sent", "last"),
 			"The UNIX timestamp of the last message sent to the source.",
 			[]string{"type", "id", "source"},
 			nil),
@@ -300,13 +300,13 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.srcProcessed, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "stamp":
-				ch <- prometheus.MustNewConstMetric(e.srcStamp, prometheus.CounterValue,
+				ch <- prometheus.MustNewConstMetric(e.srcStamp, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "msg_size_max":
-				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeMax, prometheus.CounterValue,
+				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeMax, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "msg_size_avg":
-				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeAvg, prometheus.CounterValue,
+				ch <- prometheus.MustNewConstMetric(e.srcMsgSizeAvg, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "eps_last_1h":
 				ch <- prometheus.MustNewConstMetric(e.srcEpsLast1h, prometheus.CounterValue,
@@ -351,13 +351,13 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.dstMsgSizeMax, prometheus.GaugeValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "eps_last_1h":
-				ch <- prometheus.MustNewConstMetric(e.dstEpsLast1h, prometheus.GaugeValue,
+				ch <- prometheus.MustNewConstMetric(e.dstEpsLast1h, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "eps_last_24h":
-				ch <- prometheus.MustNewConstMetric(e.dstEpsLast24h, prometheus.GaugeValue,
+				ch <- prometheus.MustNewConstMetric(e.dstEpsLast24h, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			case "eps_since_start":
-				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.GaugeValue,
+				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 
 			}
