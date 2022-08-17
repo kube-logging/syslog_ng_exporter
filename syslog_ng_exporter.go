@@ -59,6 +59,12 @@ type Exporter struct {
 	dstEpsLast24h     *prometheus.Desc
 	dstEpsSinceStart  *prometheus.Desc
 	dstCPU            *prometheus.Desc
+	filterMatched     *prometheus.Desc
+	filterNotMatched  *prometheus.Desc
+	parserDiscarded   *prometheus.Desc
+	globalProcessed   *prometheus.Desc
+	globalQueued      *prometheus.Desc
+	globalValue       *prometheus.Desc
 	up                *prometheus.Desc
 	scrapeSuccess     prometheus.Counter
 	scrapeFailures    prometheus.Counter
@@ -160,7 +166,7 @@ func NewExporter(path string) *Exporter {
 			[]string{"type", "id", "destination"},
 			nil),
 		dstMemory: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "destination_bytes_stored", "total"),
+			prometheus.BuildFQName(namespace, "destination_bytes_memory", "total"),
 			"Bytes of memory currently used to store messages for this destination.",
 			[]string{"type", "id", "destination"},
 			nil),
@@ -181,6 +187,36 @@ func NewExporter(path string) *Exporter {
 			nil),
 		dstCPU: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "destination_bytes_processed", "total"),
+			"Bytes of cpu currently used to process messages for this destination.",
+			[]string{"type", "id", "destination"},
+			nil),
+		filterMatched: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "filter_matched", "total"),
+			"The number of messages that are accepted by a given filter. ",
+			[]string{"type", "id", "destination"},
+			nil),
+		filterNotMatched: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "filter_not_matched", "total"),
+			": The number of messages that are filtered out by a given filter.",
+			[]string{"type", "id", "destination"},
+			nil),
+		parserDiscarded: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "parser_discarded", "total"),
+			"The number of messages discarded by the given parser.",
+			[]string{"type", "id", "destination"},
+			nil),
+		globalProcessed: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "global_processed", "total"),
+			"Bytes of cpu currently used to process messages for this destination.",
+			[]string{"type", "id", "destination"},
+			nil),
+		globalQueued: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "global_queued", "total"),
+			"Bytes of cpu currently used to process messages for this destination.",
+			[]string{"type", "id", "destination"},
+			nil),
+		globalValue: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "global_value", "total"),
 			"Bytes of cpu currently used to process messages for this destination.",
 			[]string{"type", "id", "destination"},
 			nil),
@@ -222,6 +258,12 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.dstWritten
 	ch <- e.dstMemory
 	ch <- e.dstCPU
+	ch <- e.filterMatched
+	ch <- e.filterNotMatched
+	ch <- e.parserDiscarded
+	ch <- e.globalProcessed
+	ch <- e.globalQueued
+	ch <- e.globalValue
 	ch <- e.up
 	ch <- e.dstTruncatedCount
 	ch <- e.dstTruncatedBytes
@@ -359,7 +401,33 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			case "eps_since_start":
 				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
-
+			}
+		case "filter.":
+			switch stat.metric {
+			case "matched":
+				ch <- prometheus.MustNewConstMetric(e.filterMatched, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "not_matched":
+				ch <- prometheus.MustNewConstMetric(e.filterNotMatched, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			}
+		case "parser.":
+			switch stat.metric {
+			case "discarded":
+				ch <- prometheus.MustNewConstMetric(e.parserDiscarded, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			}
+		case "global.":
+			switch stat.metric {
+			case "processed":
+				ch <- prometheus.MustNewConstMetric(e.globalProcessed, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "queued":
+				ch <- prometheus.MustNewConstMetric(e.globalQueued, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			case "value":
+				ch <- prometheus.MustNewConstMetric(e.globalValue, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
 			}
 		}
 	}
