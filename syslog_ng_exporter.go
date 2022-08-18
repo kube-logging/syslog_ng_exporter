@@ -62,6 +62,7 @@ type Exporter struct {
 	filterMatched     *prometheus.Desc
 	filterNotMatched  *prometheus.Desc
 	parserDiscarded   *prometheus.Desc
+	centerProcessed   *prometheus.Desc
 	globalProcessed   *prometheus.Desc
 	globalQueued      *prometheus.Desc
 	globalValue       *prometheus.Desc
@@ -207,23 +208,28 @@ func NewExporter(path string) *Exporter {
 			nil),
 		globalProcessed: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_processed", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global processed messages",
 			[]string{"type", "id", "destination"},
 			nil),
 		globalQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_queued", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global queued messages",
 			[]string{"type", "id", "destination"},
 			nil),
 		globalValue: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_value", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global value",
 			[]string{"type", "id", "destination"},
 			nil),
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Reads 1 if the syslog-ng server could be reached, else 0.",
 			nil,
+			nil),
+		centerProcessed: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "center_messages_processed", "total"),
+			"Number of messages processed by center.",
+			[]string{"type", "id", "source"},
 			nil),
 		scrapeFailures: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
@@ -271,6 +277,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.dstEpsLast1h
 	ch <- e.dstEpsLast24h
 	ch <- e.dstEpsSinceStart
+	ch <- e.centerProcessed
 	e.scrapeFailures.Describe(ch)
 	e.scrapeSuccess.Describe(ch)
 }
@@ -402,7 +409,7 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "filter":
+		case "filt":
 			switch stat.metric {
 			case "matched":
 				ch <- prometheus.MustNewConstMetric(e.filterMatched, prometheus.CounterValue,
@@ -411,13 +418,19 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.filterNotMatched, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "parser":
+		case "pars":
 			switch stat.metric {
 			case "discarded":
 				ch <- prometheus.MustNewConstMetric(e.parserDiscarded, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "global":
+		case "cent":
+			switch stat.metric {
+			case "processed":
+				ch <- prometheus.MustNewConstMetric(e.centerProcessed, prometheus.CounterValue,
+					stat.value, stat.objectType, stat.id, stat.instance)
+			}
+		case "glob":
 			switch stat.metric {
 			case "processed":
 				ch <- prometheus.MustNewConstMetric(e.globalProcessed, prometheus.CounterValue,
