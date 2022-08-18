@@ -76,6 +76,9 @@ source;s_sys;;a;processed;72
 dst.file;d_auth#0;/var/log/secure;a;dropped;0
 dst.file;d_auth#0;/var/log/secure;a;processed;51
 dst.file;d_auth#0;/var/log/secure;a;stored;0
+filter;flow_default_flow01_match;;a;matched;83652
+filter;flow_default_flow01_match;;a;not_matched;21478
+parser;flow_default_flow01_filters_0;;a;discarded;0
 .`
 	metricCountLevel1 = 11
 	metricCountLevel2 = 18

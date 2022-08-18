@@ -207,17 +207,17 @@ func NewExporter(path string) *Exporter {
 			nil),
 		globalProcessed: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_processed", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global processed messages",
 			[]string{"type", "id", "destination"},
 			nil),
 		globalQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_queued", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global queued messages",
 			[]string{"type", "id", "destination"},
 			nil),
 		globalValue: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "global_value", "total"),
-			"Bytes of cpu currently used to process messages for this destination.",
+			"Global value",
 			[]string{"type", "id", "destination"},
 			nil),
 		up: prometheus.NewDesc(
@@ -402,7 +402,7 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "filter":
+		case "filt":
 			switch stat.metric {
 			case "matched":
 				ch <- prometheus.MustNewConstMetric(e.filterMatched, prometheus.CounterValue,
@@ -411,13 +411,13 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(e.filterNotMatched, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "parser":
+		case "pars":
 			switch stat.metric {
 			case "discarded":
 				ch <- prometheus.MustNewConstMetric(e.parserDiscarded, prometheus.CounterValue,
 					stat.value, stat.objectType, stat.id, stat.instance)
 			}
-		case "global":
+		case "glob":
 			switch stat.metric {
 			case "processed":
 				ch <- prometheus.MustNewConstMetric(e.globalProcessed, prometheus.CounterValue,
