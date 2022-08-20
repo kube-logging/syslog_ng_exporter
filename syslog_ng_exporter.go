@@ -88,6 +88,22 @@ type Stat struct {
 	value      float64
 }
 
+func TruncateString(str string, length int) string {
+	if length <= 0 {
+		return ""
+	}
+	truncated := ""
+	count := 0
+	for _, char := range str {
+		truncated += string(char)
+		count++
+		if count >= length {
+			break
+		}
+	}
+	return truncated
+}
+
 func NewExporter(path string) *Exporter {
 	return &Exporter{
 		sockPath: path,
@@ -371,43 +387,43 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			switch stat.metric {
 			case "dropped":
 				ch <- prometheus.MustNewConstMetric(e.dstDropped, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "processed":
 				ch <- prometheus.MustNewConstMetric(e.dstProcessed, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "written":
 				ch <- prometheus.MustNewConstMetric(e.dstWritten, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "stored":
 				ch <- prometheus.MustNewConstMetric(e.dstStored, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "queued":
 				ch <- prometheus.MustNewConstMetric(e.dstQueued, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "memory_usage":
 				ch <- prometheus.MustNewConstMetric(e.dstMemory, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "cpu_usage":
 				ch <- prometheus.MustNewConstMetric(e.dstCPU, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "truncated_count":
 				ch <- prometheus.MustNewConstMetric(e.dstTruncatedCount, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "truncated_bytes":
 				ch <- prometheus.MustNewConstMetric(e.dstTruncatedBytes, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "msg_size_max":
 				ch <- prometheus.MustNewConstMetric(e.dstMsgSizeMax, prometheus.GaugeValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "eps_last_1h":
 				ch <- prometheus.MustNewConstMetric(e.dstEpsLast1h, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "eps_last_24h":
 				ch <- prometheus.MustNewConstMetric(e.dstEpsLast24h, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			case "eps_since_start":
 				ch <- prometheus.MustNewConstMetric(e.dstEpsSinceStart, prometheus.CounterValue,
-					stat.value, stat.objectType, stat.id, stat.instance)
+					stat.value, stat.objectType, stat.id, TruncateString(stat.instance, 70))
 			}
 		case "filt":
 			switch stat.metric {
