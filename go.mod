@@ -1,4 +1,4 @@
-module github.com/banzaicloud/syslog_ng_exporter
+module github.com/kube-logging/syslog_ng_exporter
 
 go 1.18
 
