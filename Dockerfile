@@ -1,19 +1,16 @@
 FROM golang:1.20-alpine3.18 AS builder
 
-ENV GO1111MODULE=on 
-
 WORKDIR /app
 
 # Copy go mod and sum files
 COPY go.mod .
-
 COPY go.sum .
 
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build 
+RUN CGO_ENABLED=0 go build 
 
 FROM scratch
 
